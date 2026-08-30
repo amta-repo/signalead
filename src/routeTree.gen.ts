@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as ApiPublicTrackEventRouteImport } from './routes/api/public/track-event'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsRoute = ClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTrackEventRoute = ApiPublicTrackEventRouteImport.update({
@@ -25,27 +31,31 @@ const ApiPublicTrackEventRoute = ApiPublicTrackEventRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/clients': typeof ClientsRoute
   '/api/public/track-event': typeof ApiPublicTrackEventRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/clients': typeof ClientsRoute
   '/api/public/track-event': typeof ApiPublicTrackEventRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/clients': typeof ClientsRoute
   '/api/public/track-event': typeof ApiPublicTrackEventRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/track-event'
+  fullPaths: '/' | '/clients' | '/api/public/track-event'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/track-event'
-  id: '__root__' | '/' | '/api/public/track-event'
+  to: '/' | '/clients' | '/api/public/track-event'
+  id: '__root__' | '/' | '/clients' | '/api/public/track-event'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ClientsRoute: typeof ClientsRoute
   ApiPublicTrackEventRoute: typeof ApiPublicTrackEventRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients': {
+      id: '/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof ClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/track-event': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ClientsRoute: ClientsRoute,
   ApiPublicTrackEventRoute: ApiPublicTrackEventRoute,
 }
 export const routeTree = rootRouteImport
