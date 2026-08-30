@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assessBusiness, convertToClient, searchBusinesses } from "@/lib/signal.functions";
-import type { BusinessCardData } from "@/lib/signal-ops.server";
+import type { BusinessCardData } from "@/lib/signal-types";
 import { useActiveClient, writeActiveKey } from "@/lib/use-active-client";
 
 export const Route = createFileRoute("/")({
