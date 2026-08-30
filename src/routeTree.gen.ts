@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as EmbedRouteImport } from './routes/embed'
 import { Route as LeadsRouteImport } from './routes/leads'
@@ -18,6 +19,11 @@ import { Route as ApiPublicTrackEventRouteImport } from './routes/api/public/tra
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientsRoute = ClientsRouteImport.update({
@@ -43,6 +49,7 @@ const ApiPublicTrackEventRoute = ApiPublicTrackEventRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/clients': typeof ClientsRoute
   '/embed': typeof EmbedRoute
   '/leads': typeof LeadsRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/clients': typeof ClientsRoute
   '/embed': typeof EmbedRoute
   '/leads': typeof LeadsRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/clients': typeof ClientsRoute
   '/embed': typeof EmbedRoute
   '/leads': typeof LeadsRoute
@@ -65,12 +74,25 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/clients' | '/embed' | '/leads' | '/api/public/track-event'
+  fullPaths:
+    | '/'
+    | '/account'
+    | '/clients'
+    | '/embed'
+    | '/leads'
+    | '/api/public/track-event'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/clients' | '/embed' | '/leads' | '/api/public/track-event'
+  to:
+    | '/'
+    | '/account'
+    | '/clients'
+    | '/embed'
+    | '/leads'
+    | '/api/public/track-event'
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/clients'
     | '/embed'
     | '/leads'
@@ -79,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   ClientsRoute: typeof ClientsRoute
   EmbedRoute: typeof EmbedRoute
   LeadsRoute: typeof LeadsRoute
@@ -92,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clients': {
@@ -127,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   ClientsRoute: ClientsRoute,
   EmbedRoute: EmbedRoute,
   LeadsRoute: LeadsRoute,
