@@ -13,30 +13,13 @@ import {
   totalScore,
   type BusinessRow,
 } from "./signal.server";
+import type {
+  BusinessCardData,
+  LeadRow,
+  ManagedClient,
+  SessionInfo,
+} from "./signal-types";
 
-export type SessionInfo = {
-  id: string;
-  name: string;
-  intentThreshold: number;
-  isAgency: boolean;
-  createdAt: string;
-};
-
-export type BusinessCardData = {
-  id: string;
-  name: string;
-  address: string | null;
-  website: string | null;
-  industry: string | null;
-  hasWebsite: boolean | null;
-  hasSsl: boolean | null;
-  paymentPlatform: string | null;
-  signalFlags: string[];
-  pitch: string | null;
-  status: string;
-  assessedAt: string | null;
-  convertedClientId: string | null;
-};
 
 function toCard(row: BusinessRow): BusinessCardData {
   return {
@@ -222,13 +205,6 @@ export async function runConvert(
   };
 }
 
-export type ManagedClient = {
-  id: string;
-  name: string;
-  apiKey: string;
-  intentThreshold: number;
-  createdAt: string;
-};
 
 export async function runListClients(apiKey: string): Promise<ManagedClient[]> {
   const client = await requireClient(apiKey);
@@ -248,21 +224,6 @@ export async function runListClients(apiKey: string): Promise<ManagedClient[]> {
   }));
 }
 
-export type LeadRow = {
-  id: string;
-  contactName: string | null;
-  contactEmail: string | null;
-  visitorId: string | null;
-  fitScore: number;
-  intentScore: number;
-  totalScore: number;
-  status: string;
-  businessName: string | null;
-  eventCount: number;
-  lastSeen: string | null;
-  qualified: boolean;
-  createdAt: string;
-};
 
 export async function runGetLeads(
   apiKey: string,
