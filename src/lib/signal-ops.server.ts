@@ -324,6 +324,38 @@ export async function recordEvent(payload: {
   });
   if (error) throw new SignalError(`Could not record event: ${error.message}`);
 
+  // Every tracked visitor becomes a lead row immediately, so anonymous traffic
+  // is still ranked by intent. Identification later enriches the same row.
+  const { data: existing, error: existingError } = await db
+    .from("leads")
+    .select("id, contact_email")
+    .eq("client_id", client.id)
+    .eq("visitor_id", payload.visitorId)
+    .limit(1);
+  if (existingError) throw new SignalError(`Could not read lead: ${existingError.message}`);
+
+  let leadId = existing?.[0]?.id as string | undefined;
+  if (!leadId) {
+    const { data: created, error: createError } = await db
+      .from("leads")
+      .insert({ client_id: client.id, visitor_id: payload.visitorId })
+      .select("id")
+      .single();
+    // A concurrent event may have created it first; re-read instead of failing.
+    if (createError) {
+      const { data: retry } = await db
+        .from("leads")
+        .select("id")
+        .eq("client_id", client.id)
+        .eq("visitor_id", payload.visitorId)
+        .limit(1);
+      leadId = retry?.[0]?.id as string | undefined;
+      if (!leadId) throw new SignalError(`Could not save lead: ${createError.message}`);
+    } else {
+      leadId = created.id as string;
+    }
+  }
+
   const email = typeof payload.meta["email"] === "string" ? payload.meta["email"].trim() : "";
   if (payload.eventType === "identify" && email) {
     const name = typeof payload.meta["name"] === "string" ? payload.meta["name"] : null;
@@ -341,22 +373,32 @@ export async function recordEvent(payload: {
         (candidates ?? []).find((b) => hostFromUrl(b.website as string) === domain)?.id ?? null;
     }
 
-    const { error: leadError } = await db.from("leads").upsert(
-      {
-        client_id: client.id,
+    const { error: leadError } = await db
+      .from("leads")
+      .update({
         business_id: businessId,
-        visitor_id: payload.visitorId,
         contact_name: name,
         contact_email: email.toLowerCase(),
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: "client_id,contact_email" },
-    );
-    if (leadError) throw new SignalError(`Could not save lead: ${leadError.message}`);
+      })
+      .eq("id", leadId);
+
+    // Unique (client_id, contact_email): this person already has a lead row
+    // under a different visitor id. Keep the identified row and drop the dupe.
+    if (leadError) {
+      if (leadError.code === "23505") {
+        await db.from("leads").delete().eq("id", leadId);
+      } else {
+        throw new SignalError(`Could not save lead: ${leadError.message}`);
+      }
+    }
+  } else {
+    await db.from("leads").update({ updated_at: new Date().toISOString() }).eq("id", leadId);
   }
 
   return { ok: true };
 }
+
 
 // ------------------------------------------------------- first-run bootstrap
 
