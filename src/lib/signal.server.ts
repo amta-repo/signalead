@@ -173,8 +173,9 @@ export async function generatePitch(input: {
   flags: string[];
   gateway: string | null;
 }): Promise<string | null> {
-  const key = process.env["GEMINI_API_KEY"];
-  if (!key) return null;
+  const geminiKey = process.env["GEMINI_API_KEY"];
+  const lovableKey = process.env["LOVABLE_API_KEY"];
+  if (!geminiKey && !lovableKey) return null;
 
   const gaps =
     input.flags.length > 0
@@ -204,6 +205,16 @@ export async function generatePitch(input: {
     .filter(Boolean)
     .join(" ");
 
+  if (geminiKey) {
+    const viaGemini = await pitchViaGemini(prompt, geminiKey);
+    if (viaGemini) return viaGemini;
+  }
+  if (lovableKey) return pitchViaLovableAi(prompt, lovableKey);
+  return null;
+}
+
+/** Google AI Studio (Gemini) — used first when GEMINI_API_KEY is set. */
+async function pitchViaGemini(prompt: string, key: string): Promise<string | null> {
   try {
     const res = await fetchWithTimeout(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
@@ -233,6 +244,41 @@ export async function generatePitch(input: {
     return text && text.length > 0 ? text : null;
   } catch (error) {
     console.error("Gemini pitch error", error);
+    return null;
+  }
+}
+
+/**
+ * Lovable AI Gateway fallback. Keeps pitch generation working when the Gemini
+ * key is missing, restricted, rate-limited, or out of quota.
+ */
+async function pitchViaLovableAi(prompt: string, key: string): Promise<string | null> {
+  try {
+    const res = await fetchWithTimeout(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      25_000,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "Lovable-API-Key": key },
+        body: JSON.stringify({
+          model: "google/gemini-3.7-flash",
+          messages: [{ role: "user", content: prompt }],
+        }),
+      },
+    );
+
+    if (!res.ok) {
+      console.error("Lovable AI pitch failed", res.status, await res.text());
+      return null;
+    }
+
+    const body = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const text = body.choices?.[0]?.message?.content?.trim();
+    return text && text.length > 0 ? text : null;
+  } catch (error) {
+    console.error("Lovable AI pitch error", error);
     return null;
   }
 }

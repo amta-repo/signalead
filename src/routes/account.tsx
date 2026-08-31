@@ -9,7 +9,12 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getSession, updateThreshold } from "@/lib/signal.functions";
+import {
+  agencyExists,
+  bootstrapAgency,
+  getSession,
+  updateThreshold,
+} from "@/lib/signal.functions";
 import { useActiveClient } from "@/lib/use-active-client";
 
 export const Route = createFileRoute("/account")({
@@ -35,11 +40,35 @@ function AccountScreen() {
   const { apiKey, ready, setKey } = useActiveClient();
   const [draft, setDraft] = useState("");
   const [threshold, setThreshold] = useState("60");
+  const [agencyName, setAgencyName] = useState("My Agency");
   const loadSession = useServerFn(getSession);
   const saveThreshold = useServerFn(updateThreshold);
+  const checkAgency = useServerFn(agencyExists);
+  const createAgency = useServerFn(bootstrapAgency);
   const queryClient = useQueryClient();
 
   useEffect(() => setDraft(apiKey), [apiKey]);
+
+  const agencyProbe = useQuery({
+    queryKey: ["agency-exists"],
+    queryFn: () => checkAgency(),
+    enabled: ready && apiKey.length === 0,
+    retry: false,
+  });
+
+  const bootstrapMutation = useMutation({
+    mutationFn: () => createAgency({ data: { name: agencyName } }),
+    onSuccess: (result) => {
+      setKey(result.apiKey);
+      setDraft(result.apiKey);
+      toast.success(`Agency "${result.name}" created`, {
+        description: "Save this key somewhere safe — it's your owner key.",
+        duration: 15_000,
+      });
+      void queryClient.invalidateQueries({ queryKey: ["agency-exists"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const session = useQuery({
     queryKey: ["session", apiKey],
@@ -47,6 +76,8 @@ function AccountScreen() {
     enabled: ready && apiKey.length > 0,
     retry: false,
   });
+
+
 
   useEffect(() => {
     if (session.data) setThreshold(String(session.data.intentThreshold));
@@ -68,6 +99,35 @@ function AccountScreen() {
       title="Account"
       subtitle="The console acts as whichever account key is active here — your agency, or any client you manage."
     >
+      {ready && !apiKey && agencyProbe.data?.exists === false ? (
+        <section className="border-hot/40 bg-hot/5 mb-6 space-y-4 rounded-xl border p-5">
+          <div>
+            <h2 className="font-semibold tracking-tight">First run — create your agency account</h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              No agency account exists in your database yet. Create it once; every client you
+              convert will hang off it.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="agencyName">Agency name</Label>
+              <Input
+                id="agencyName"
+                value={agencyName}
+                onChange={(e) => setAgencyName(e.target.value)}
+                className="max-w-[240px]"
+              />
+            </div>
+            <Button
+              disabled={bootstrapMutation.isPending}
+              onClick={() => bootstrapMutation.mutate()}
+            >
+              Create agency account
+            </Button>
+          </div>
+        </section>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="border-border bg-surface space-y-4 rounded-xl border p-5">
           <div>

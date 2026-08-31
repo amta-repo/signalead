@@ -72,3 +72,15 @@ export const updateThreshold = createServerFn({ method: "POST" })
     const { runUpdateThreshold } = await import("./signal-ops.server");
     return runUpdateThreshold(data.apiKey, data.intentThreshold);
   });
+
+export const agencyExists = createServerFn({ method: "GET" }).handler(async () => {
+  const { runAgencyExists } = await import("./signal-ops.server");
+  return runAgencyExists();
+});
+
+export const bootstrapAgency = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ name: z.string().max(120) }).parse(input))
+  .handler(async ({ data }) => {
+    const { runBootstrapAgency } = await import("./signal-ops.server");
+    return runBootstrapAgency(data.name);
+  });
