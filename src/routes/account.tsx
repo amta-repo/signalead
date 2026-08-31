@@ -9,7 +9,12 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getSession, updateThreshold } from "@/lib/signal.functions";
+import {
+  agencyExists,
+  bootstrapAgency,
+  getSession,
+  updateThreshold,
+} from "@/lib/signal.functions";
 import { useActiveClient } from "@/lib/use-active-client";
 
 export const Route = createFileRoute("/account")({
@@ -94,6 +99,35 @@ function AccountScreen() {
       title="Account"
       subtitle="The console acts as whichever account key is active here — your agency, or any client you manage."
     >
+      {ready && !apiKey && agencyProbe.data?.exists === false ? (
+        <section className="border-hot/40 bg-hot/5 mb-6 space-y-4 rounded-xl border p-5">
+          <div>
+            <h2 className="font-semibold tracking-tight">First run — create your agency account</h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              No agency account exists in your database yet. Create it once; every client you
+              convert will hang off it.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="agencyName">Agency name</Label>
+              <Input
+                id="agencyName"
+                value={agencyName}
+                onChange={(e) => setAgencyName(e.target.value)}
+                className="max-w-[240px]"
+              />
+            </div>
+            <Button
+              disabled={bootstrapMutation.isPending}
+              onClick={() => bootstrapMutation.mutate()}
+            >
+              Create agency account
+            </Button>
+          </div>
+        </section>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="border-border bg-surface space-y-4 rounded-xl border p-5">
           <div>
