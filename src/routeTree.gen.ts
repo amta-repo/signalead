@@ -14,7 +14,6 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as EmbedRouteImport } from './routes/embed'
 import { Route as LeadsRouteImport } from './routes/leads'
-import { Route as ApiPublicTmpAiRouteImport } from './routes/api/public/tmp-ai'
 import { Route as ApiPublicTrackEventRouteImport } from './routes/api/public/track-event'
 
 const IndexRoute = IndexRouteImport.update({
@@ -42,11 +41,6 @@ const LeadsRoute = LeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicTmpAiRoute = ApiPublicTmpAiRouteImport.update({
-  id: '/api/public/tmp-ai',
-  path: '/api/public/tmp-ai',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicTrackEventRoute = ApiPublicTrackEventRouteImport.update({
   id: '/api/public/track-event',
   path: '/api/public/track-event',
@@ -59,7 +53,6 @@ export interface FileRoutesByFullPath {
   '/clients': typeof ClientsRoute
   '/embed': typeof EmbedRoute
   '/leads': typeof LeadsRoute
-  '/api/public/tmp-ai': typeof ApiPublicTmpAiRoute
   '/api/public/track-event': typeof ApiPublicTrackEventRoute
 }
 export interface FileRoutesByTo {
@@ -68,7 +61,6 @@ export interface FileRoutesByTo {
   '/clients': typeof ClientsRoute
   '/embed': typeof EmbedRoute
   '/leads': typeof LeadsRoute
-  '/api/public/tmp-ai': typeof ApiPublicTmpAiRoute
   '/api/public/track-event': typeof ApiPublicTrackEventRoute
 }
 export interface FileRoutesById {
@@ -78,7 +70,6 @@ export interface FileRoutesById {
   '/clients': typeof ClientsRoute
   '/embed': typeof EmbedRoute
   '/leads': typeof LeadsRoute
-  '/api/public/tmp-ai': typeof ApiPublicTmpAiRoute
   '/api/public/track-event': typeof ApiPublicTrackEventRoute
 }
 export interface FileRouteTypes {
@@ -89,7 +80,6 @@ export interface FileRouteTypes {
     | '/clients'
     | '/embed'
     | '/leads'
-    | '/api/public/tmp-ai'
     | '/api/public/track-event'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -98,7 +88,6 @@ export interface FileRouteTypes {
     | '/clients'
     | '/embed'
     | '/leads'
-    | '/api/public/tmp-ai'
     | '/api/public/track-event'
   id:
     | '__root__'
@@ -107,7 +96,6 @@ export interface FileRouteTypes {
     | '/clients'
     | '/embed'
     | '/leads'
-    | '/api/public/tmp-ai'
     | '/api/public/track-event'
   fileRoutesById: FileRoutesById
 }
@@ -117,7 +105,6 @@ export interface RootRouteChildren {
   ClientsRoute: typeof ClientsRoute
   EmbedRoute: typeof EmbedRoute
   LeadsRoute: typeof LeadsRoute
-  ApiPublicTmpAiRoute: typeof ApiPublicTmpAiRoute
   ApiPublicTrackEventRoute: typeof ApiPublicTrackEventRoute
 }
 
@@ -158,13 +145,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/tmp-ai': {
-      id: '/api/public/tmp-ai'
-      path: '/api/public/tmp-ai'
-      fullPath: '/api/public/tmp-ai'
-      preLoaderRoute: typeof ApiPublicTmpAiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/track-event': {
       id: '/api/public/track-event'
       path: '/api/public/track-event'
@@ -181,7 +161,6 @@ const rootRouteChildren: RootRouteChildren = {
   ClientsRoute: ClientsRoute,
   EmbedRoute: EmbedRoute,
   LeadsRoute: LeadsRoute,
-  ApiPublicTmpAiRoute: ApiPublicTmpAiRoute,
   ApiPublicTrackEventRoute: ApiPublicTrackEventRoute,
 }
 export const routeTree = rootRouteImport
