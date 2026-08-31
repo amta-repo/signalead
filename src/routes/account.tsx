@@ -35,11 +35,35 @@ function AccountScreen() {
   const { apiKey, ready, setKey } = useActiveClient();
   const [draft, setDraft] = useState("");
   const [threshold, setThreshold] = useState("60");
+  const [agencyName, setAgencyName] = useState("My Agency");
   const loadSession = useServerFn(getSession);
   const saveThreshold = useServerFn(updateThreshold);
+  const checkAgency = useServerFn(agencyExists);
+  const createAgency = useServerFn(bootstrapAgency);
   const queryClient = useQueryClient();
 
   useEffect(() => setDraft(apiKey), [apiKey]);
+
+  const agencyProbe = useQuery({
+    queryKey: ["agency-exists"],
+    queryFn: () => checkAgency(),
+    enabled: ready && apiKey.length === 0,
+    retry: false,
+  });
+
+  const bootstrapMutation = useMutation({
+    mutationFn: () => createAgency({ data: { name: agencyName } }),
+    onSuccess: (result) => {
+      setKey(result.apiKey);
+      setDraft(result.apiKey);
+      toast.success(`Agency "${result.name}" created`, {
+        description: "Save this key somewhere safe — it's your owner key.",
+        duration: 15_000,
+      });
+      void queryClient.invalidateQueries({ queryKey: ["agency-exists"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   const session = useQuery({
     queryKey: ["session", apiKey],
@@ -47,6 +71,8 @@ function AccountScreen() {
     enabled: ready && apiKey.length > 0,
     retry: false,
   });
+
+
 
   useEffect(() => {
     if (session.data) setThreshold(String(session.data.intentThreshold));
