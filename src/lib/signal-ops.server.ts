@@ -357,3 +357,47 @@ export async function recordEvent(payload: {
 
   return { ok: true };
 }
+
+// ------------------------------------------------------- first-run bootstrap
+
+/**
+ * Creates the agency account (parent_client_id = null) the very first time the
+ * console is used. Refuses once any agency row exists, so it cannot be used to
+ * mint extra owner accounts later.
+ */
+export async function runBootstrapAgency(
+  name: string,
+): Promise<{ name: string; apiKey: string }> {
+  const db = getDb();
+
+  const { data: existing, error } = await db
+    .from("clients")
+    .select("id")
+    .is("parent_client_id", null)
+    .limit(1);
+  if (error) throw new SignalError(`Database error: ${error.message}`);
+  if ((existing ?? []).length > 0) {
+    throw new SignalError(
+      "An agency account already exists. Paste its key instead of creating a new one.",
+    );
+  }
+
+  const { data: created, error: createError } = await db
+    .from("clients")
+    .insert({ name: name.trim() || "My Agency", api_key: newApiKey("sk_agency"), parent_client_id: null })
+    .select("name, api_key")
+    .single();
+  if (createError) throw new SignalError(`Could not create agency: ${createError.message}`);
+
+  return { name: created.name as string, apiKey: created.api_key as string };
+}
+
+export async function runAgencyExists(): Promise<{ exists: boolean }> {
+  const { data, error } = await getDb()
+    .from("clients")
+    .select("id")
+    .is("parent_client_id", null)
+    .limit(1);
+  if (error) throw new SignalError(`Database error: ${error.message}`);
+  return { exists: (data ?? []).length > 0 };
+}
