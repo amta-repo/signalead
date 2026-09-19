@@ -59,61 +59,92 @@ export function newApiKey(prefix = "sk_client"): string {
 type PlacesResult = {
   place_id: string;
   name: string;
-  formatted_address?: string;
-  geometry?: { location?: { lat: number; lng: number } };
+  formatted_address?: string | undefined;
+  website?: string | null | undefined;
+  geometry?: { location?: { lat: number; lng: number } } | undefined;
+};
+
+const MAPS_GATEWAY = "https://connector-gateway.lovable.dev/google_maps";
+
+function mapsHeaders(fieldMask: string): Record<string, string> {
+  const lovableKey = process.env["LOVABLE_API_KEY"];
+  const mapsKey = process.env["GOOGLE_MAPS_API_KEY"];
+  if (!lovableKey || !mapsKey) {
+    throw new SignalError("Google Maps is not connected for this project yet.");
+  }
+  return {
+    Authorization: `Bearer ${lovableKey}`,
+    "X-Connection-Api-Key": mapsKey,
+    "Content-Type": "application/json",
+    "X-Goog-FieldMask": fieldMask,
+  };
+}
+
+async function mapsError(res: Response): Promise<never> {
+  const text = await res.text();
+  if (res.status === 403) {
+    throw new SignalError(
+      "Google refused the business search request (permission denied). The connected Google Maps access may be restricted.",
+    );
+  }
+  if (res.status === 429) {
+    throw new SignalError("Google Places search limit reached. Try again in a little while.");
+  }
+  console.error("Places gateway error", res.status, text);
+  throw new SignalError(`Business search failed (${res.status}).`);
+}
+
+type NewPlace = {
+  id?: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  location?: { latitude?: number; longitude?: number };
+  websiteUri?: string;
 };
 
 export async function placesTextSearch(query: string): Promise<PlacesResult[]> {
-  const key = process.env["GOOGLE_PLACES_API_KEY"];
-  if (!key) throw new SignalError("Google Places is not configured (GOOGLE_PLACES_API_KEY).");
+  const res = await fetchWithTimeout(`${MAPS_GATEWAY}/places/v1/places:searchText`, 15_000, {
+    method: "POST",
+    headers: mapsHeaders(
+      "places.id,places.displayName,places.formattedAddress,places.location,places.websiteUri",
+    ),
+    body: JSON.stringify({ textQuery: query, pageSize: 20 }),
+  });
 
-  const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json");
-  url.searchParams.set("query", query);
-  url.searchParams.set("key", key);
+  if (!res.ok) await mapsError(res);
 
-  const res = await fetchWithTimeout(url.toString(), 12_000);
-  if (!res.ok) throw new SignalError(`Places search failed (${res.status}).`);
-
-  const body = (await res.json()) as {
-    status: string;
-    error_message?: string;
-    results?: PlacesResult[];
-  };
-
-  if (body.status === "ZERO_RESULTS") return [];
-  if (body.status !== "OK") {
-    const raw = body.error_message ?? "";
-    if (/billing/i.test(raw)) {
-      throw new SignalError(
-        "Business search is unavailable: the Google account behind your Places key needs billing turned on. Enable billing on that Google Cloud project, then search again.",
-      );
-    }
-    if (body.status === "REQUEST_DENIED") {
-      throw new SignalError(
-        `Google refused the search key: ${raw || "request denied"}. Check the key's restrictions and that Places API is enabled.`,
-      );
-    }
-    if (body.status === "OVER_QUERY_LIMIT") {
-      throw new SignalError("Google Places quota reached for today. Try again later.");
-    }
-    throw new SignalError(raw || `Places search failed (${body.status}).`);
-  }
-  return body.results ?? [];
+  const body = (await res.json()) as { places?: NewPlace[] };
+  return (body.places ?? [])
+    .filter((p): p is NewPlace & { id: string } => Boolean(p.id))
+    .map((p) => ({
+      place_id: p.id,
+      name: p.displayName?.text ?? "Unnamed business",
+      formatted_address: p.formattedAddress,
+      website: p.websiteUri ?? null,
+      geometry:
+        p.location?.latitude != null && p.location?.longitude != null
+          ? { location: { lat: p.location.latitude, lng: p.location.longitude } }
+          : undefined,
+    }));
 }
 
 export async function placeDetailsWebsite(placeId: string): Promise<string | null> {
-  const key = process.env["GOOGLE_PLACES_API_KEY"];
-  if (!key) throw new SignalError("Google Places is not configured (GOOGLE_PLACES_API_KEY).");
-
-  const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
-  url.searchParams.set("place_id", placeId);
-  url.searchParams.set("fields", "website,url,name");
-  url.searchParams.set("key", key);
-
-  const res = await fetchWithTimeout(url.toString(), 12_000);
-  if (!res.ok) return null;
-  const body = (await res.json()) as { result?: { website?: string } };
-  return body.result?.website ?? null;
+  try {
+    const res = await fetchWithTimeout(
+      `${MAPS_GATEWAY}/places/v1/places/${encodeURIComponent(placeId)}`,
+      12_000,
+      { method: "GET", headers: mapsHeaders("id,websiteUri") },
+    );
+    if (!res.ok) {
+      console.error("Place details failed", res.status, await res.text());
+      return null;
+    }
+    const body = (await res.json()) as NewPlace;
+    return body.websiteUri ?? null;
+  } catch (error) {
+    console.error("Place details error", error);
+    return null;
+  }
 }
 
 // ------------------------------------------------------- payment detection

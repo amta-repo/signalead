@@ -68,6 +68,7 @@ export async function runSearch(
     place_id: r.place_id,
     name: r.name,
     address: r.formatted_address ?? null,
+    website: r.website ?? null,
     lat: r.geometry?.location?.lat ?? null,
     lng: r.geometry?.location?.lng ?? null,
     industry,
