@@ -59,9 +59,9 @@ export function newApiKey(prefix = "sk_client"): string {
 type PlacesResult = {
   place_id: string;
   name: string;
-  formatted_address?: string;
-  website?: string | null;
-  geometry?: { location?: { lat: number; lng: number } };
+  formatted_address?: string | undefined;
+  website?: string | null | undefined;
+  geometry?: { location?: { lat: number; lng: number } } | undefined;
 };
 
 const MAPS_GATEWAY = "https://connector-gateway.lovable.dev/google_maps";
