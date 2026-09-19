@@ -82,7 +82,21 @@ export async function placesTextSearch(query: string): Promise<PlacesResult[]> {
 
   if (body.status === "ZERO_RESULTS") return [];
   if (body.status !== "OK") {
-    throw new SignalError(body.error_message ?? `Places search failed (${body.status}).`);
+    const raw = body.error_message ?? "";
+    if (/billing/i.test(raw)) {
+      throw new SignalError(
+        "Business search is unavailable: the Google account behind your Places key needs billing turned on. Enable billing on that Google Cloud project, then search again.",
+      );
+    }
+    if (body.status === "REQUEST_DENIED") {
+      throw new SignalError(
+        `Google refused the search key: ${raw || "request denied"}. Check the key's restrictions and that Places API is enabled.`,
+      );
+    }
+    if (body.status === "OVER_QUERY_LIMIT") {
+      throw new SignalError("Google Places quota reached for today. Try again later.");
+    }
+    throw new SignalError(raw || `Places search failed (${body.status}).`);
   }
   return body.results ?? [];
 }
